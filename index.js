@@ -34,13 +34,13 @@ let scrape = async () => {
 
     let results = [];
 
-    for (let i = 1; i <= 1; i++) {
+    for (let i = 1; i <= 27; i++) {
         results = results.concat(
             await getInfo(page2, BOOKS_URL + JSON.stringify(i))
         );
     }
 
-    // await browser.close();
+    await browser.close();
     return results;
 };
 
@@ -61,17 +61,17 @@ const getInfo = async (page, url) => {
         for (let title_url of data) {
             await page.goto(title_url, { waitUntil: "load" });
 
-            await page.evaluate(async () => {
+            const data = await page.evaluate(async () => {
                 const title = document.querySelector("#bookTitle")?.innerText || document.querySelector("h1.Text.Text__title1")?.innerText;
-                const authorElements = document.querySelector("div#bookAuthors") || document.querySelectorAll(".ContributorLink__name");
-				// const authorsNames = Array.from(document.querySelectorAll("#bookAuthors > span[itemprop='author'] > div.authorName__container > a.authorName > span")) || Array.from(document.querySelectorAll(".ContributorLink__name"));
-				const authorsNames = Array.from(document.querySelectorAll("#bookAuthors > span[itemprop='author'] > div.authorName__container > a.authorName > span")) || document.querySelector("body");
-				let authors = []
-				console.log('authorLOLOL: ', authorsNames);
-				// console.log(authorsNames[0].innerText)
-				for (let author of authorsNames) {
+				let authorsNames = document.querySelectorAll("#bookAuthors > span[itemprop='author'] > div.authorName__container > a.authorName > span");
+
+				if (authorsNames.length === 0) {
+					authorsNames = document.querySelectorAll("div.ContributorLinksList > span > a.ContributorLink > .ContributorLink__name");
+				}
+
+				let authors = [];
+				for (let author of Array.from(authorsNames)) {
 					authors.push(author?.innerText);
-					console.log('in loop:', author?.innerText)
 				}
                 const description = document.querySelector(".readable.stacked > span[style='display:none']")?.innerHTML || document.querySelector("span.Formatted")?.innerHTML;
                 const rating = document.querySelector("span[itemprop='ratingValue']")?.innerText || document.querySelector("div.RatingStatistics__rating")?.innerText;
@@ -81,49 +81,10 @@ const getInfo = async (page, url) => {
 				const publicationDate = document.querySelector("div#details > div.row:not(:has(*))")?.innerText || document.querySelector("p[data-testid='publicationInfo']")?.innerText;
                 const language = document.querySelector("div[itemprop='inLanguage']")?.innerText || document.querySelector(".DescList");
 
-				const detailsButton = document.querySelector("div.Button__container > button");
-				// if (detailsButton) {
-				// 	console.log('details button:', detailsButton)
-				// 	await detailsButton.click();
-				// 	const editionDetails = document.querySelector("div.EditionDetails");
-				// 	console.log('edition details:', editionDetails);
-				// }
-				console.log(language)
-
 				// 195 pages, Hardcover
 				const formatAndPages = document.querySelector("p[data-testid='pagesFormat']")?.innerText;	// new design
 				const bookFormat = document.querySelector("span[itemprop='bookFormat']")?.innerText || formatAndPages?.slice(-9);
 				const numberOfPages = document.querySelector("span[itemprop='numberOfPages']")?.innerText || formatAndPages?.slice(0, 3);
-
-                console.log(
-                    "title: ",
-                    title,
-                    "\n",
-                    "authors: ",
-                    authors,
-                    "\n",
-                    "description:",
-                    description,
-                    "\n",
-                    "rating:",
-                    rating,
-                    "\n",
-                    "imgUrl: ",
-                    imgUrl,
-                    "\n",
-                    "publicationDate:",
-					publicationDate,
-                    "\n",
-                    "language: ",
-                    language,
-                    "\n",
-					"format:",
-					bookFormat,
-					"\n",
-					"pages: ",
-					numberOfPages,
-					"\n"
-                );
 
 				const book_data = {
 					title,
@@ -136,27 +97,21 @@ const getInfo = async (page, url) => {
 					bookFormat,
 					numberOfPages
 				}
+				return book_data;
+				// console.log(book_data)
             });
-            return;
+			books_data.push(data);
         }
+		return books_data;
+
     } catch (e) {
         console.log(e);
     }
 };
 
-const book = {
-    title: "",
-    authors: [],
-    description: "",
-    rating: 0,
-    imgUrl: "",
-    publicationDate: "",
-    language: "",
-};
-
 scrape().then((value) => {
-    // console.log(value);
-    // fs.writeFileSync("./data/data.json", JSON.stringify(value), (err) =>
-    //     err ? console.log(err) : null
-    // );
+    console.log(value);
+    fs.writeFileSync("./data/business.json", JSON.stringify(value), (err) =>
+        err ? console.log(err) : null
+    );
 });
