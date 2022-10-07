@@ -4,7 +4,7 @@ const fs = require("fs");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
 
-const BOOKS_URL = "https://www.goodreads.com/shelf/show/business?page=";
+const BOOKS_URL = "https://www.goodreads.com/shelf/show/startup?page=";
 
 let scrape = async () => {
     const browser = await puppeteer.launch({
@@ -73,12 +73,12 @@ const getInfo = async (page, url) => {
 				for (let author of Array.from(authorsNames)) {
 					authors.push(author?.innerText);
 				}
-                const description = document.querySelector(".readable.stacked > span[style='display:none']")?.innerHTML || document.querySelector("span.Formatted")?.innerHTML;
+                const description = document.querySelector(".readable.stacked > span[style='display:none']")?.innerHTML || document.querySelector(".readable.stacked > span")?.innerHTML || document.querySelector("span.Formatted")?.innerHTML;
                 const rating = document.querySelector("span[itemprop='ratingValue']")?.innerText || document.querySelector("div.RatingStatistics__rating")?.innerText;
                 const imgUrl = document.querySelector("a[itemprop='image'] > img")?.src || document.querySelector("img.ResponsiveImage")?.src;
                 
 				// Published September 16th 2014 by 
-				const publicationDate = document.querySelector("div#details > div.row:not(:has(*))")?.innerText || document.querySelector("p[data-testid='publicationInfo']")?.innerText;
+				const publicationDate = document.querySelectorAll("div#details > div.row")[1]?.innerText || document.querySelector("p[data-testid='publicationInfo']")?.innerText;
                 const language = document.querySelector("div[itemprop='inLanguage']")?.innerText || document.querySelector(".DescList");
 
 				// 195 pages, Hardcover
@@ -111,7 +111,7 @@ const getInfo = async (page, url) => {
 
 scrape().then((value) => {
     console.log(value);
-    fs.writeFileSync("./data/business.json", JSON.stringify(value), (err) =>
+    fs.writeFileSync("./data/startup.json", JSON.stringify(value), (err) =>
         err ? console.log(err) : null
     );
 });
