@@ -34,7 +34,7 @@ let scrape = async () => {
 
     let results = [];
 
-    for (let i = 1; i <= 27; i++) {
+    for (let i = 1; i <= 1; i++) {
         results = results.concat(
             await getInfo(page2, BOOKS_URL + JSON.stringify(i))
         );
@@ -58,12 +58,14 @@ const getInfo = async (page, url) => {
             return urls_data;
         });
 		let books_data = [];
-        for (let title_url of data) {
+        // for (let title_url of data) {
+		for (let i = 0; i <= 10; i++) {
+			const title_url = data[i];
             await page.goto(title_url, { waitUntil: "load" });
 
-            const data = await page.evaluate(async () => {
+            const book_data = await page.evaluate(async () => {
                 const title = document.querySelector("#bookTitle")?.innerText || document.querySelector("h1.Text.Text__title1")?.innerText;
-				let authorsNames = document.querySelectorAll("#bookAuthors > span[itemprop='author'] > div.authorName__container > a.authorName > span");
+				let authorsNames = document.querySelectorAll("#bookAuthors > span[itemprop='author'] > div.authorName__container > a.authorName");
 
 				if (authorsNames.length === 0) {
 					authorsNames = document.querySelectorAll("div.ContributorLinksList > span > a.ContributorLink > .ContributorLink__name");
@@ -71,11 +73,19 @@ const getInfo = async (page, url) => {
 
 				let authors = [];
 				for (let author of Array.from(authorsNames)) {
-					authors.push(author?.innerText);
+
+					const name = author.innerText;
+					const pageLink = author.href;
+					let authorData = {
+						name,
+						pageLink
+					}
+					authors.push(authorData);
 				}
                 const description = document.querySelector(".readable.stacked > span[style='display:none']")?.innerHTML || document.querySelector(".readable.stacked > span")?.innerHTML || document.querySelector("span.Formatted")?.innerHTML;
                 const rating = document.querySelector("span[itemprop='ratingValue']")?.innerText || document.querySelector("div.RatingStatistics__rating")?.innerText;
-                const imgUrl = document.querySelector("a[itemprop='image'] > img")?.src || document.querySelector("img.ResponsiveImage")?.src;
+				const ratingsCount = document.querySelector("meta[itemprop='ratingCount']")?.content
+				const imgUrl = document.querySelector("a[itemprop='image'] > img")?.src || document.querySelector("img.ResponsiveImage")?.src;
                 
 				// Published September 16th 2014 by 
 				const publicationDate = document.querySelectorAll("div#details > div.row")[1]?.innerText || document.querySelector("p[data-testid='publicationInfo']")?.innerText;
@@ -86,21 +96,81 @@ const getInfo = async (page, url) => {
 				const bookFormat = document.querySelector("span[itemprop='bookFormat']")?.innerText || formatAndPages?.slice(-9);
 				const numberOfPages = document.querySelector("span[itemprop='numberOfPages']")?.innerText || formatAndPages?.slice(0, 3);
 
+				const genresBox = document.querySelectorAll("div.bigBoxBody > div > div.elementList");
+
+				let genres = [];
+				for (let genre of Array.from(genresBox)) {
+
+					const genreNodes = genre.querySelectorAll("div.left > a");
+					const lastGenre = genreNodes[genreNodes.length - 1]?.innerText;
+					// console.log(lastGenre)
+					genres.push(lastGenre)
+				}
+
+				const amazonLink = document.querySelector("ul > li > a#buyButton")?.href;
+
+
 				const book_data = {
 					title,
 					authors,
 					description,
 					rating,
+					ratingsCount,
 					imgUrl,
 					publicationDate,
 					language,
 					bookFormat,
-					numberOfPages
+					numberOfPages,
+					genres,
+					amazonLink
 				}
-				return book_data;
 				// console.log(book_data)
+				return book_data;
             });
-			books_data.push(data);
+			book_data.titleUrl = title_url;
+			// console.log(data)	// in terminal
+			const authors_data = [];
+
+			for (let author of book_data.authors) {
+				// console.log(author)
+				
+				await page.goto(author?.pageLink, { waitUntil: "load" });
+
+				const authorData = await page.evaluate(async () => {
+					const details = {}
+					const authorName = document.querySelector("div.rightContainer > div > h1.authorName")?.innerText;
+					// details.push({"Name": authorName})
+					details["name"] = authorName;
+					const info = Array.from(document.querySelectorAll("div.rightContainer > div[class^='data']"));
+
+					for (let i = 0; i < info.length; i++) {
+						let title = info[i]?.innerText, item;
+						if (i !== info.length - 1) {
+							item = info[i + 1].querySelector("a")?.href;
+						}
+						// console.log(info[i])
+						// Website, Twitter, LinkedIn, Youtube
+						
+						if (title === "Website") {
+							// details.push({
+							// 	"Website": item
+							// })
+							details["website"] = item;
+						}
+						else if (title === "Twitter") {
+							details["twitter"] = item;
+						}
+					}
+					return details;
+				})
+
+				authors_data.push(authorData)
+			}
+			// console.log("Book authors:", authors_data)
+			// book_data.authors = book_data.authors.concat(authors_data);
+			book_data.authors = authors_data;
+
+			books_data.push(book_data);
         }
 		return books_data;
 
@@ -111,7 +181,7 @@ const getInfo = async (page, url) => {
 
 scrape().then((value) => {
     console.log(value);
-    fs.writeFileSync("./data/startup.json", JSON.stringify(value), (err) =>
+    fs.writeFileSync("./data/test.json", JSON.stringify(value), (err) =>
         err ? console.log(err) : null
     );
 });
