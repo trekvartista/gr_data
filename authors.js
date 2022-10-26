@@ -1,6 +1,5 @@
 const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
-// const books_data = require("./data/combined.json");
 const unique_authors = require("./data/unique_authors.json");
 
 const userAgent = require("user-agents");
@@ -15,10 +14,12 @@ let scrape = async () => {
 
     const page = await browser.newPage();
     await page.setUserAgent(userAgent.random().toString());
+    await page.goto("https://www.bing.com/", { waitUntil: "load" });
+	await page.waitForTimeout(5000);
 
     const authors_data = [];
 
-    for (let i = 0; i < unique_authors.length; i++) {
+    for (let i = 1406; i < unique_authors.length; i++) {
         const author = unique_authors[i];
         const data = await getAuthorInfo(page, author);
         authors_data.push(data);
@@ -30,37 +31,41 @@ let scrape = async () => {
 
 const getAuthorInfo = async (page, author) => {
     try {
-        await page.goto("https://www.yahoo.com/");
+        // author's linkedin page
+        let inputHandle = await page.waitForXPath("//input[@name = 'q']");
 
-        // let inputHandle = await page.waitForXPath("//input[@name = 'q']");
-        let inputHandle = await page.waitForXPath("//input[@name = 'p']");
-        await inputHandle.type(`${author} site:linkedin.com`, {
-            delay: 0,
-        });
+        await inputHandle.click({ clickCount: 3 });
+        await inputHandle.type(`${author} site:linkedin.com`, { delay: 12 });
         await page.keyboard.press("Enter");
 
-        // yahoo: _yb_3r16d, name='p' not
-        // yahoo: id='ybar-sbq' name='p'
         await page.waitForNavigation();
         const linkedin = await page.evaluate(async () => {
-            const element = document.querySelector("div#web > ol > li.first > div > div.compTitle.options-toggle > h3 > a");
-            console.log(element);
-
+            let node = document.querySelector("ol#b_results > li");
+            let element = node.querySelector("a");
             return element?.href;
         });
 
-        await page.goto("https://www.yahoo.com/");
-        // inputHandle = await page.waitForXPath("//input[@name = 'q']");
-        inputHandle = await page.waitForXPath("//input[@name = 'p']");
+        // author's goodreads page
+        inputHandle = await page.waitForXPath("//input[@name = 'q']");
+
+        await inputHandle.click({ clickCount: 3 });
 
         await inputHandle.type(`${author} site:goodreads.com/author/show`, {
-            delay: 0,
+            delay: 2,
         });
         await page.keyboard.press("Enter");
         await page.waitForNavigation();
 
         const authorPage = await page.evaluate(async () => {
-            const element = document.querySelector("div#web > ol > li.first > div > div.compTitle.options-toggle > h3 > a");
+            // let element = document.querySelector("ol#b_results > li.b_algo > div.b_title > h2 > a");
+            // if (!element) {
+            // 	element = document.querySelector("ol#b_results > li.b_algo > h2 > a");
+            // 	if (!element) {
+            // 		element = document.querySelector("ol#b_results > li > div.b_algo_group > h2 > a")
+            // 	}
+            // }
+            let node = document.querySelector("ol#b_results > li");
+            let element = node.querySelector("a");
             return element?.href;
         });
 
@@ -79,7 +84,7 @@ scrape().then((value) => {
     console.log(value);
 
     fs.writeFileSync(
-        "./data/authors_data.json",
+        "./data/authors_data_from_1407.json",
         JSON.stringify(value),
         (err) => (err ? console.log(err) : null)
     );
