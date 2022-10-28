@@ -1,6 +1,7 @@
 const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
-const unique_authors = require("./data/unique_authors.json");
+// const unique_authors = require("./data/unique_authors.json");
+const lost_authors = require("./data/lost_authors.json")
 
 const userAgent = require("user-agents");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
@@ -19,8 +20,8 @@ let scrape = async () => {
 
     const authors_data = [];
 
-    for (let i = 1406; i < unique_authors.length; i++) {
-        const author = unique_authors[i];
+    for (let i = 0; i < lost_authors.length; i++) {
+        const author = lost_authors[i];
         const data = await getAuthorInfo(page, author);
         authors_data.push(data);
     }
@@ -84,7 +85,7 @@ scrape().then((value) => {
     console.log(value);
 
     fs.writeFileSync(
-        "./data/authors_data_from_1407.json",
+        "./data/lost_authors_data.json",
         JSON.stringify(value),
         (err) => (err ? console.log(err) : null)
     );
